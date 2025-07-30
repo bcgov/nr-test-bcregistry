@@ -1,0 +1,153 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+labels:
+  app: ${NAME}-${ZONE}
+  app.kubernetes.io/part-of: ${NAME}-${ZONE}
+parameters:
+  - name: NAME
+    description: Module name
+    value: bc-registry-test
+  - name: COMPONENT
+    description: Component name
+    value: backend
+  - name: ZONE
+    description: Deployment zone, e.g. pr-### or prod
+    required: true
+  - name: TAG
+    description: Image tag; e.g. PR number, latest or prod
+    required: true
+  - name: REGISTRY
+    description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
+    value: ghcr.io
+  - name: ORG
+    description: Organization name
+    value: bcgov
+  - name: DOMAIN
+    value: apps.silver.devops.gov.bc.ca
+  - name: REGISTRY
+    description: Container registry to import from (internal is image-registry.openshift-image-registry.svc:5000)
+    value: ghcr.io
+  - name: CPU_REQUEST
+    value: 75m
+  - name: MEMORY_REQUEST
+    value: 200Mi
+  - name: BCREGISTRY_URI
+    description: Bc Registry API address
+    value: https://api.connect.gov.bc.ca
+  - name: BCREGISTRY_KEY
+    description: BC Registry key
+    required: true
+  - name: BCREGISTRY_ACCOUNT
+    description: BC Registry account Id
+    required: true
+  - name: RANDOM_EXPRESSION
+    description: Random expression to make sure deployments update
+    from: "[a-zA-Z0-9]{32}"
+    generate: expression
+objects:
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: ${NAME}-${ZONE}
+      labels:
+        app: ${NAME}-${ZONE}
+    stringData:
+      bcregistry-key: ${BCREGISTRY_KEY}
+      bcregistry-account: ${BCREGISTRY_ACCOUNT}
+  - kind: Deployment
+    apiVersion: apps/v1
+    metadata:
+      labels:
+        app: ${NAME}-${ZONE}
+      name: ${NAME}-${ZONE}-${COMPONENT}
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          deployment: ${NAME}-${ZONE}-${COMPONENT}
+      strategy:
+        type: RollingUpdate
+      template:
+        metadata:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "8080"
+            prometheus.io/path: "/metrics"
+          labels:
+            app: ${NAME}-${ZONE}
+            deployment: ${NAME}-${ZONE}-${COMPONENT}
+        spec:
+          containers:
+            - image: ${REGISTRY}/${ORG}/${NAME}/${COMPONENT}:${TAG}
+              imagePullPolicy: Always
+              name: ${NAME}
+              env:
+                - name: BCREGISTRY_URI
+                  value: ${BCREGISTRY_URI}
+                - name: BCREGISTRY_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${NAME}-${ZONE}
+                      key: bcregistry-key
+                - name: BCREGISTRY_ACCOUNT
+                  valueFrom:
+                    secretKeyRef:
+                      name: ${NAME}-${ZONE}
+                      key: bcregistry-account
+                - name: TZ
+                  value: America/Vancouver
+                - name: RANDOM_EXPRESSION
+                  value: ${RANDOM_EXPRESSION}
+              ports:
+                - containerPort: 8080
+                  protocol: TCP
+              resources:
+                requests:
+                  cpu: ${CPU_REQUEST}
+                  memory: ${MEMORY_REQUEST}
+              readinessProbe:
+                successThreshold: 1
+                failureThreshold: 15
+                httpGet:
+                  path: /health
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 10
+                periodSeconds: 30
+                timeoutSeconds: 5
+  - kind: Service
+    apiVersion: v1
+    metadata:
+      labels:
+        app: ${NAME}-${ZONE}
+      name: ${NAME}-${ZONE}-${COMPONENT}
+    spec:
+      ports:
+        - name: 8080-tcp
+          protocol: TCP
+          port: 80
+          targetPort: 8080
+      selector:
+        deployment: ${NAME}-${ZONE}-${COMPONENT}
+  - kind: Route
+    apiVersion: route.openshift.io/v1
+    metadata:
+      labels:
+        app: ${NAME}-${ZONE}
+      name: ${NAME}-${ZONE}-${COMPONENT}
+      annotations:
+        haproxy.router.openshift.io/rate-limit-connections: "true"
+        haproxy.router.openshift.io/rate-limit-connections.rate-http: "150"
+        haproxy.router.openshift.io/rate-limit-connections.rate-tcp: "75"
+    spec:
+      host: ${NAME}-${ZONE}-${COMPONENT}.${DOMAIN}
+      port:
+        targetPort: 8080-tcp
+      to:
+        kind: Service
+        name: ${NAME}-${ZONE}-${COMPONENT}
+        weight: 100
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
+
