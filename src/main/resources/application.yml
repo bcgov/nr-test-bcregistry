@@ -77,7 +77,7 @@ ca:
     gov:
       nrs:
         bcregistry:
-          uri: ${BCREGISTRY_URI:https://bcregistry-sandbox.apigee.net}
+          uri: https://api.connect.gov.bc.ca
           apiKey: ${BCREGISTRY_KEY:123456}
           accountId: ${BCREGISTRY_ACCOUNT:123456}
 
