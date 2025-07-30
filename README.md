@@ -1,0 +1,1 @@
+# BC Registry connectivity test

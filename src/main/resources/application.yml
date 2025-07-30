@@ -1,0 +1,109 @@
+spring:
+  application:
+    name: nr-test-bcregistry
+  main:
+    lazy-initialization: false
+    banner-mode: "off"
+    allow-bean-definition-overriding: true
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  sleuth:
+    propagation-keys:
+      - X-TRACE-ID
+      - X-USER
+    baggage-keys:
+      - X-TRACE-ID
+      - X-USER
+    log:
+      slf4j:
+        whitelisted-mdc-keys:
+          - X-TRACE-ID
+          - X-USER
+  jackson:
+    serialization:
+      FAIL_ON_EMPTY_BEANS: false
+
+management:
+  enable-native-support: true
+  endpoint:
+    metrics:
+      enabled: false
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  endpoints:
+    web:
+      path-mapping:
+        prometheus: metrics
+      base-path: /
+      exposure:
+        include: health,info,metrics,otlp,tracing,httptrace,prometheus
+  httpexchanges:
+    recording:
+      include: principal,request-headers,response-headers,cookie-headers,time-taken,authorization-header,remote-address,session-id
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    enabled: false
+    baggage:
+      remote-fields:
+        - X-TRACE-ID
+        - X-USER
+      correlation:
+        fields:
+          - X-TRACE-ID
+          - X-USER
+    sampling:
+      probability: 0.75
+  zipkin:
+    metrics:
+      export:
+        enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    zone: ${APP_ZONE:local}
+    version: ${APP_VERSION:0.0.1}
+
+ca:
+  bc:
+    gov:
+      nrs:
+        bcregistry:
+          uri: ${BCREGISTRY_URI:https://bcregistry-sandbox.apigee.net}
+          apiKey: ${BCREGISTRY_KEY:123456}
+          accountId: ${BCREGISTRY_ACCOUNT:123456}
+
+logging:
+  pattern:
+    correlation: "[${spring.application.name:},%X{${X-TRACE-ID:traceId}:-},%X{spanId:-},%X{X-USER:-}] "
+
+# Profile Specific Properties
+---
+spring:
+  config:
+    activate:
+      on-profile: container
+  sleuth:
+    propagation-keys:
+      - X-TRACE-ID
+      - X-USER
+    baggage-keys:
+      - X-TRACE-ID
+      - X-USER
+    log:
+      slf4j:
+        whitelisted-mdc-keys:
+          - X-TRACE-ID
+          - X-USER
+
+logging:
+  pattern:
+    console: "{\"time\": \"%d{${LOG_DATEFORMAT_PATTERN:yyyy-MM-dd HH:mm:ss.SSS}}\", \"level\": \"${LOG_LEVEL:%5p}\", \"app\":\"${spring.application.name:-}\", \"user\":\"%X{X-USER:-}\", \"traceId\":\"%X{${X-TRACE-ID:traceId}:-}\", \"spanId\":\"%X{spanId:-}\", \"pid\": \"${PID: }\", \"thread\": \"%t\", \"source\": \"%logger{63}:%L\", \"message\": \"%m\", \"exception\":\"${LOG_EXCEPTION_CONVERSION_WORD:%wEx}\"}%n"
