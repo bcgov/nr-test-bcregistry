@@ -6,7 +6,7 @@ labels:
 parameters:
   - name: NAME
     description: Module name
-    value: bc-registry-test
+    value: nr-test-bcregistry
   - name: COMPONENT
     description: Component name
     value: backend

@@ -18,8 +18,8 @@ jobs:
     steps:
       - uses: bcgov/action-builder-ghcr@v2.3.0
         with:
-          package: test
-          tag: test
+          package: backend
+          tag: ${{ github.event.number }}
           tag_fallback: latest
           build_context: ./
           build_file: Dockerfile
@@ -44,5 +44,5 @@ jobs:
           parameters:
             -p BCREGISTRY_KEY=${{ secrets.BCREGISTRY_KEY }}
             -p BCREGISTRY_ACCOUNT=${{ secrets.BCREGISTRY_ACCOUNT }}
-            -p ZONE=${{ github.event.number }}
+            -p ZONE=dev
             -p TAG=${{ github.event.number }}
