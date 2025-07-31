@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: bcgov/action-builder-ghcr@v2.3.0
         with:
-          package: backend
+          package: test
           tag: ${{ github.event.number }}
           tag_fallback: latest
           build_context: ./
