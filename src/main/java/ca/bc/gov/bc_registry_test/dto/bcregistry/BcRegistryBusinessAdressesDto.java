@@ -9,16 +9,20 @@ public record BcRegistryBusinessAdressesDto(
     BcRegistryAddressDto mailingAddress,
     BcRegistryAddressDto deliveryAddress
 ) {
+
   public boolean isValid() {
-    return mailingAddress != null || deliveryAddress != null;
+    return (mailingAddress != null && mailingAddress.isValid())
+           || (deliveryAddress != null && deliveryAddress.isValid());
   }
 
   public Set<BcRegistryAddressDto> addresses() {
     Set<BcRegistryAddressDto> addressDtoSet = new HashSet<>();
-    if (mailingAddress != null)
+    if (mailingAddress != null) {
       addressDtoSet.add(mailingAddress.withAddressType("mailing"));
-    if (deliveryAddress != null)
+    }
+    if (deliveryAddress != null) {
       addressDtoSet.add(deliveryAddress.withAddressType("delivery"));
+    }
     return addressDtoSet;
   }
 }
