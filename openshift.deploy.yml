@@ -9,7 +9,7 @@ parameters:
     value: nr-test-bcregistry
   - name: COMPONENT
     description: Component name
-    value: test
+    value: backend
   - name: ZONE
     description: Deployment zone, e.g. pr-### or prod
     required: true
